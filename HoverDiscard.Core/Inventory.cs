@@ -24,11 +24,19 @@ public sealed class Selection
     public HashSet<ItemKey> NewItems { get; } = [];
     public HashSet<ItemKey> Excluded { get; } = [];
 
-    public void Add(ItemKey key, IReadOnlySet<ItemKey> saved)
+    public void Add(ItemKey key, IReadOnlySet<ItemKey> saved, IReadOnlySet<uint> whitelisted)
     {
+        if (whitelisted.Contains(key.ItemId))
+            return;
         if (!saved.Contains(key))
             NewItems.Add(key);
         Excluded.Remove(key);
+    }
+
+    public void RemoveItem(uint itemId)
+    {
+        NewItems.RemoveWhere(key => key.ItemId == itemId);
+        Excluded.RemoveWhere(key => key.ItemId == itemId);
     }
 
     public void Reset()
@@ -37,18 +45,22 @@ public sealed class Selection
         Excluded.Clear();
     }
 
-    public IReadOnlyList<ItemRow> Rows(InventorySnapshot? inventory, IReadOnlySet<ItemKey> saved)
+    public IReadOnlyList<ItemRow> Rows(InventorySnapshot? inventory, IReadOnlySet<ItemKey> saved,
+        IReadOnlySet<uint> whitelisted)
     {
         var slots = inventory?.Slots ?? [];
         return NewItems.Union(saved).Select(key =>
         {
             var matches = slots.Where(s => s.Key == key).ToArray();
             return new ItemRow(key, matches.Sum(s => s.Quantity), matches.Length,
-                saved.Contains(key), !Excluded.Contains(key),
+                saved.Contains(key), !Excluded.Contains(key) && !whitelisted.Contains(key.ItemId),
                 matches.Length > 0 && matches.All(s => s.CanDiscard));
         }).OrderBy(r => r.Key.ItemId).ThenBy(r => r.Key.Quality).ToArray();
     }
 
-    public HashSet<ItemKey> Included(IReadOnlySet<ItemKey> saved) =>
-        NewItems.Union(saved).Except(Excluded).ToHashSet();
+    public HashSet<ItemKey> Included(IReadOnlySet<ItemKey> saved, IReadOnlySet<uint> whitelisted,
+        IReadOnlySet<ItemKey>? visible = null) =>
+        NewItems.Union(saved).Except(Excluded)
+            .Where(key => !whitelisted.Contains(key.ItemId) && (visible == null || visible.Contains(key)))
+            .ToHashSet();
 }

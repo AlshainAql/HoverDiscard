@@ -12,12 +12,30 @@ public enum TextId
     Language, SelectionKey, SelectionKeyHint, SaveFailed, RetrySave, ConfigInvalid, RuntimeError,
     SelectedTotal, RememberedCount, RuleHint, ActiveHint, NoItems, ExcludedHint, ClearHint,
     PendingStop, CommandHelp,
+    Whitelist, WhitelistInstructions, WhitelistHint, WhitelistCount, EmptyWhitelist, Protect, ProtectHint, Protected, ProtectedHint, Unprotect, UnprotectHint, AllCategories, OtherCategory, SearchHint, NoMatches, Status, FilteredDiscardHint,
 }
 
 public static class Localization
 {
     private static readonly Dictionary<TextId, (string English, string Japanese)> Text = new()
     {
+        [TextId.Whitelist] = ("Whitelist", "ホワイトリスト"),
+        [TextId.WhitelistInstructions] = ("Hold {0} and hover over a main-inventory item to protect it.", "所持品のアイテムにマウスを重ねながら {0} を押すと、ホワイトリストに登録します。"),
+        [TextId.WhitelistHint] = ("Protection applies to this character and all qualities (NQ, HQ, and collectables). Protected items cannot enter the discard list, even if remembered.", "保護はこのキャラクターのNQ・HQ・収集品すべてに適用されます。記憶済みでも、保護中のアイテムは破棄リストに追加されません。"),
+        [TextId.WhitelistCount] = ("Protected item types: {0}", "保護中のアイテム：{0} 種類"),
+        [TextId.EmptyWhitelist] = ("No protected items. Hold the selection key over inventory items, or use Protect in another list.", "保護中のアイテムはありません。選択キー＋MO、または他の一覧の「保護する」から登録できます。"),
+        [TextId.Protect] = ("Protect", "保護する"),
+        [TextId.ProtectHint] = ("Add to the whitelist for all qualities and remove any new selection. Remembered rules are kept but inactive while protected.", "全品質をホワイトリストに登録し、今回の選択から外します。記憶済みのルールは残りますが、保護中は適用されません。"),
+        [TextId.Protected] = ("Protected", "保護中"),
+        [TextId.ProtectedHint] = ("This remembered rule is inactive because the item is whitelisted.", "ホワイトリストに登録されているため、この記憶ルールは適用されません。"),
+        [TextId.Unprotect] = ("Unprotect", "保護を解除"),
+        [TextId.UnprotectHint] = ("Remove from the whitelist. Any remembered rules for this item become active again.", "ホワイトリストから外します。このアイテムの記憶ルールが残っている場合は、再び適用されます。"),
+        [TextId.AllCategories] = ("All", "すべて"),
+        [TextId.OtherCategory] = ("Other", "その他"),
+        [TextId.SearchHint] = ("Search by item name or ID", "アイテム名・IDで検索"),
+        [TextId.NoMatches] = ("No items match this category and search.", "このカテゴリー・検索条件に一致するアイテムはありません。"),
+        [TextId.Status] = ("Status", "状態"),
+        [TextId.FilteredDiscardHint] = ("Only checked items in the current category and search results will be discarded.", "現在のカテゴリー・検索結果に表示されている、チェック済みのアイテムだけを破棄します。"),
         [TextId.CommandHelp] = ("Open HoverDiscard.", "HoverDiscardを開きます。"),
         [TextId.DiscardList] = ("Discard list", "破棄リスト"),
         [TextId.RememberedItems] = ("Remembered items", "記憶したアイテム"),
@@ -58,8 +76,8 @@ public static class Localization
         [TextId.RequestFailed] = ("Stopped because the discard request could not be sent.", "破棄の要求を送信できなかったため停止しました。"),
         [TextId.Language] = ("Language", "表示言語"),
         [TextId.SelectionKey] = ("Selection key", "選択キー"),
-        [TextId.SelectionKeyHint] = ("Selection works only while the Discard list tab is visible. NQ, HQ, and collectables are separate.", "「破棄リスト」タブを表示している間だけ選択できます。NQ・HQ・収集品は別々に扱います。"),
-        [TextId.SaveFailed] = ("Items may have been discarded, but settings could not be saved. Retry saving before closing the plugin.", "破棄が成功していても、設定の保存に失敗しています。プラグインを閉じる前に保存を再試行してください。"),
+        [TextId.SelectionKeyHint] = ("The key adds items to the visible Discard list or Whitelist tab. Discard rules track qualities separately; whitelist protection covers all qualities.", "選択キーは、表示中の「破棄リスト」または「ホワイトリスト」に追加します。破棄ルールは品質別、ホワイトリストの保護は全品質共通です。"),
+        [TextId.SaveFailed] = ("Settings could not be saved. Retry saving before closing the plugin.", "設定の保存に失敗しています。プラグインを閉じる前に保存を再試行してください。"),
         [TextId.RetrySave] = ("Retry saving", "保存を再試行"),
         [TextId.ConfigInvalid] = ("The saved configuration could not be read. Discarding and saving are disabled to preserve it. Check the plugin log.", "保存済みの設定を読み込めませんでした。設定を保護するため、破棄と保存を停止しています。プラグインログを確認してください。"),
         [TextId.RuntimeError] = ("The inventory could not be read safely. Check the plugin log.", "所持品を安全に読み取れませんでした。プラグインログを確認してください。"),

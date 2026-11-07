@@ -15,6 +15,7 @@ internal sealed unsafe class GameInventory
 {
     private const int SlotsPerPage = 35;
     private readonly Dictionary<uint, ItemInfo> items = [];
+    private readonly Dictionary<(uint Id, UiLanguage Language), string> categories = [];
     private static readonly uint ProcessId = (uint)Environment.ProcessId;
     private static readonly ConditionFlag[] BusyConditions =
     [
@@ -54,10 +55,22 @@ internal sealed unsafe class GameInventory
             return cached;
         var row = Services.Data.GetExcelSheet<Item>()?.GetRowOrDefault(id);
         var info = row is { } item
-            ? new ItemInfo(item.Name.ToString(), item.Icon, !item.IsIndisposable)
-            : new ItemInfo("", 0, false);
+            ? new ItemInfo(item.Name.ToString(), item.Icon, !item.IsIndisposable, item.ItemUICategory.RowId)
+            : new ItemInfo("", 0, false, 0);
         items[id] = info;
         return info;
+    }
+
+    public string GetCategory(uint id, UiLanguage language)
+    {
+        if (categories.TryGetValue((id, language), out var cached))
+            return cached;
+        var clientLanguage = language == UiLanguage.Japanese
+            ? Dalamud.Game.ClientLanguage.Japanese : Dalamud.Game.ClientLanguage.English;
+        var name = Services.Data.GetExcelSheet<ItemUICategory>(clientLanguage)?.GetRowOrDefault(id)?.Name.ToString();
+        var result = string.IsNullOrWhiteSpace(name) ? Localization.Get(language, TextId.OtherCategory) : name;
+        categories[(id, language)] = result;
+        return result;
     }
 
     public InventorySnapshot? Read()
@@ -108,7 +121,7 @@ internal sealed unsafe class GameInventory
         _ => VirtualKey.SHIFT,
     }];
 
-    public static ItemKey? HoveredInventoryItem(InventorySnapshot inventory)
+    public static ItemKey? HoveredInventoryItem(InventorySnapshot inventory, bool requireDiscardable = true)
     {
         var hovered = Services.GameGui.HoveredItem;
         if (hovered == 0)
@@ -139,7 +152,7 @@ internal sealed unsafe class GameInventory
             displayOrder[i] = new SlotAddress(entry->Page, entry->Slot);
         }
         return HoverSelection.Resolve(inventory, true, detail->TypeOrId, detail->Index,
-            hovered, detail->ItemId, addon->NameString, displayOrder);
+            hovered, detail->ItemId, addon->NameString, displayOrder, requireDiscardable);
     }
 
     public static void Discard(SlotAddress address)
@@ -164,4 +177,4 @@ internal sealed unsafe class GameInventory
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(nint window, out uint processId);
 }
 
-internal sealed record ItemInfo(string Name, uint Icon, bool CanDiscard);
+internal sealed record ItemInfo(string Name, uint Icon, bool CanDiscard, uint CategoryId);

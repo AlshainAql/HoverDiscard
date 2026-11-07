@@ -5,7 +5,7 @@ public static class HoverSelection
 {
     public static ItemKey? Resolve(InventorySnapshot inventory, bool isInventoryItem,
         uint typeOrId, uint index, ulong hoveredId, uint detailId, string? intersectingAddon,
-        IReadOnlyList<SlotAddress> displayOrder)
+        IReadOnlyList<SlotAddress> displayOrder, bool requireDiscardable = true)
     {
         if (!isInventoryItem || typeOrId is < 48 or > 51 || index >= 35 || hoveredId == 0
             || displayOrder.Count != 140)
@@ -20,7 +20,7 @@ public static class HoverSelection
         if (address.Page is < 0 or > 3 || address.Slot is < 0 or >= 35)
             return null;
         var slot = inventory.Slots.FirstOrDefault(s => s.Address == address);
-        if (slot is not { CanDiscard: true, Quantity: > 0, Key: { } key })
+        if (slot is not { Quantity: > 0, Key: { } key } || (requireDiscardable && !slot.CanDiscard))
             return null;
         return BaseItemId(hoveredId) == key.ItemId && BaseItemId(detailId) == key.ItemId ? key : null;
     }

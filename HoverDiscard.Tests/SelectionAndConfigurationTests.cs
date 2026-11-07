@@ -13,8 +13,8 @@ public sealed class SelectionAndConfigurationTests
         var collectable = new ItemKey(100, ItemQuality.Collectable);
         var selection = new Selection();
         var saved = new HashSet<ItemKey> { high, collectable };
-        selection.Add(normal, saved);
-        selection.Add(normal, saved);
+        selection.Add(normal, saved, new HashSet<uint>());
+        selection.Add(normal, saved, new HashSet<uint>());
         var inventory = new InventorySnapshot(42, 7,
         [
             new(new(0, 0), normal, 99, "", true),
@@ -22,7 +22,7 @@ public sealed class SelectionAndConfigurationTests
             new(new(0, 1), high, 3, "", true),
             new(new(0, 2), collectable, 1, "", true),
         ]);
-        var rows = selection.Rows(inventory, saved);
+        var rows = selection.Rows(inventory, saved, new HashSet<uint>());
         Assert.Equal(3, rows.Count);
         var row = Assert.Single(rows, r => r.Key == normal);
         Assert.Equal(119, row.Quantity);
@@ -38,10 +38,10 @@ public sealed class SelectionAndConfigurationTests
         var saved = new HashSet<ItemKey> { key };
         var selection = new Selection();
         selection.Excluded.Add(key);
-        Assert.Empty(selection.Included(saved));
+        Assert.Empty(selection.Included(saved, new HashSet<uint>()));
         Assert.Contains(key, saved);
-        selection.Add(key, saved);
-        Assert.Contains(key, selection.Included(saved));
+        selection.Add(key, saved, new HashSet<uint>());
+        Assert.Contains(key, selection.Included(saved, new HashSet<uint>()));
         Assert.Empty(selection.NewItems);
     }
 
@@ -54,7 +54,7 @@ public sealed class SelectionAndConfigurationTests
         selection.NewItems.Add(new(200, ItemQuality.High));
         selection.Excluded.Add(key);
         selection.Reset();
-        var row = Assert.Single(selection.Rows(null, saved));
+        var row = Assert.Single(selection.Rows(null, saved, new HashSet<uint>()));
         Assert.Equal(key, row.Key);
         Assert.Equal(0, row.Quantity);
         Assert.True(row.Selected);

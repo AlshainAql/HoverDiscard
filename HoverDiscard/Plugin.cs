@@ -35,6 +35,7 @@ public sealed class Plugin : IDalamudPlugin
     internal TimeSpan Now => clock.Elapsed;
     internal TimeSpan LastSelectionDraw { get; set; } = TimeSpan.MinValue;
     internal bool AllowHover { get; set; }
+    internal bool HoverToWhitelist { get; set; }
     internal TextId? Notice { get; private set; }
 
     public Plugin(IDalamudPluginInterface pluginInterface)
@@ -93,24 +94,24 @@ public sealed class Plugin : IDalamudPlugin
         Save();
     }
 
-    internal void Start()
+    internal void Start(IReadOnlySet<ItemKey> visible)
     {
-        if (Running || Inventory == null || Character == null || !Safe)
+        if (Running || Inventory == null || Character == null || !Safe || ConfigurationInvalid || SaveFailed)
             return;
         var settings = Character;
-        var included = Selection.Included(settings.RememberedItems);
+        var included = Selection.Included(settings.RememberedItems, settings.WhitelistedItems, visible);
         var newlySelected = Selection.NewItems.Except(settings.RememberedItems).ToHashSet();
         // Freeze the reviewed snapshot at the button click. The framework revalidates it
         // against fresh inventory data before it is allowed to send any request.
         Batch = new DiscardBatch(Inventory, included, newlySelected, settings.RememberNewItems,
             key =>
             {
-                if (settings.RememberedItems.Add(key))
+                if (!settings.WhitelistedItems.Contains(key.ItemId) && settings.RememberedItems.Add(key))
                     Save();
                 if (SaveFailed)
                     Batch?.Stop();
             },
-            key => Selection.NewItems.Remove(key));
+            key => Selection.NewItems.Remove(key), settings.WhitelistedItems);
         Notice = Batch.IsRunning ? null : TextId.NoItems;
         Stopping = false;
     }
@@ -128,6 +129,23 @@ public sealed class Plugin : IDalamudPlugin
         Character.RememberedItems.Remove(key);
         Selection.Excluded.Remove(key);
         Save();
+    }
+
+    internal void Protect(uint itemId)
+    {
+        if (Running || Character == null || ConfigurationInvalid || itemId == 0)
+            return;
+        Selection.RemoveItem(itemId);
+        if (Character.WhitelistedItems.Add(itemId))
+            Save();
+    }
+
+    internal void Unprotect(uint itemId)
+    {
+        if (Running || Character == null || ConfigurationInvalid)
+            return;
+        if (Character.WhitelistedItems.Remove(itemId))
+            Save();
     }
 
     private void Update(IFramework framework)
@@ -173,8 +191,13 @@ public sealed class Plugin : IDalamudPlugin
             if (!Running && !ConfigurationInvalid && Inventory != null && Character != null && Safe
                 && window.IsOpen && AllowHover && Now - LastSelectionDraw < TimeSpan.FromMilliseconds(250)
                 && GameInventory.SelectionKeyDown(Config.SelectionKey)
-                && GameInventory.HoveredInventoryItem(Inventory) is { } key)
-                Selection.Add(key, Character.RememberedItems);
+                && GameInventory.HoveredInventoryItem(Inventory, !HoverToWhitelist) is { } key)
+            {
+                if (HoverToWhitelist)
+                    Protect(key.ItemId);
+                else
+                    Selection.Add(key, Character.RememberedItems, Character.WhitelistedItems);
+            }
         }
         catch (Exception exception)
         {

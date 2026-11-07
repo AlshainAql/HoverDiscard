@@ -10,11 +10,12 @@ public sealed class CharacterSettings
 {
     public bool RememberNewItems { get; set; } = true;
     public HashSet<ItemKey> RememberedItems { get; set; } = [];
+    public HashSet<uint> WhitelistedItems { get; set; } = [];
 }
 
 public sealed class Configuration
 {
-    public int Version { get; set; } = 1;
+    public int Version { get; set; } = 2;
     public UiLanguage Language { get; set; }
     public SelectionKey SelectionKey { get; set; } = SelectionKey.Shift;
     public Dictionary<ulong, CharacterSettings> Characters { get; set; } = [];
@@ -43,12 +44,14 @@ public static class ConfigurationFile
             return new Configuration { Language = initialLanguage };
         var result = JsonSerializer.Deserialize<Configuration>(File.ReadAllText(path), Options)
             ?? throw new InvalidDataException("The configuration is empty.");
-        if (result.Version != 1 || !Enum.IsDefined(result.Language) || !Enum.IsDefined(result.SelectionKey)
+        if (result.Version is not (1 or 2) || !Enum.IsDefined(result.Language) || !Enum.IsDefined(result.SelectionKey)
             || result.Characters == null
             || result.Characters.Any(pair => pair.Key == 0 || pair.Value == null
                 || pair.Value.RememberedItems == null
+                || pair.Value.WhitelistedItems == null || pair.Value.WhitelistedItems.Contains(0)
                 || pair.Value.RememberedItems.Any(k => k.ItemId == 0 || !Enum.IsDefined(k.Quality))))
             throw new InvalidDataException("The configuration contains unsupported values.");
+        result.Version = 2;
         return result;
     }
 

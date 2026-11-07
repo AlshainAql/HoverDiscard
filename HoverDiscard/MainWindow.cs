@@ -12,16 +12,25 @@ internal sealed class MainWindow : Window, IDisposable
 {
     private readonly Plugin plugin;
     private readonly IFontHandle font;
+    private readonly ListFilter discardFilter = new();
+    private readonly ListFilter rememberedFilter = new();
+    private readonly ListFilter whitelistFilter = new();
     private static readonly Vector4 WarningColor = new(1f, 0.75f, 0.35f, 1f);
+
+    private sealed class ListFilter
+    {
+        public uint? Category;
+        public string Search = "";
+    }
 
     public MainWindow(Plugin plugin) : base("HoverDiscard###HoverDiscardMain")
     {
         this.plugin = plugin;
-        Size = new Vector2(820, 560);
+        Size = new Vector2(920, 640);
         SizeCondition = ImGuiCond.FirstUseEver;
         SizeConstraints = new WindowSizeConstraints
         {
-            MinimumSize = new Vector2(680, 440),
+            MinimumSize = new Vector2(720, 520),
             MaximumSize = new Vector2(float.MaxValue, float.MaxValue),
         };
         font = Services.PluginInterface.UiBuilder.FontAtlas.NewDelegateFontHandle(toolkit =>
@@ -37,6 +46,7 @@ internal sealed class MainWindow : Window, IDisposable
     {
         using var fontScope = font.Push();
         plugin.AllowHover = false;
+        plugin.HoverToWhitelist = false;
         if (plugin.ConfigurationInvalid)
             Warning(TextId.ConfigInvalid);
         if (plugin.SaveFailed)
@@ -53,14 +63,19 @@ internal sealed class MainWindow : Window, IDisposable
             return;
         if (ImGui.BeginTabItem(plugin.T(TextId.DiscardList) + "###DiscardTab"))
         {
-            plugin.LastSelectionDraw = plugin.Now;
-            plugin.AllowHover = !ImGui.GetIO().WantTextInput && !ImGui.IsAnyItemActive();
             DrawDiscardList();
+            EnableHover(false);
             ImGui.EndTabItem();
         }
         if (ImGui.BeginTabItem(plugin.T(TextId.RememberedItems) + "###RememberedTab"))
         {
             DrawRememberedItems();
+            ImGui.EndTabItem();
+        }
+        if (ImGui.BeginTabItem(plugin.T(TextId.Whitelist) + "###WhitelistTab"))
+        {
+            DrawWhitelist();
+            EnableHover(true);
             ImGui.EndTabItem();
         }
         if (ImGui.BeginTabItem(plugin.T(TextId.Settings) + "###SettingsTab"))
@@ -69,6 +84,13 @@ internal sealed class MainWindow : Window, IDisposable
             ImGui.EndTabItem();
         }
         ImGui.EndTabBar();
+    }
+
+    private void EnableHover(bool whitelist)
+    {
+        plugin.LastSelectionDraw = plugin.Now;
+        plugin.HoverToWhitelist = whitelist;
+        plugin.AllowHover = !ImGui.GetIO().WantTextInput && !ImGui.IsAnyItemActive();
     }
 
     private void DrawDiscardList()
@@ -91,25 +113,26 @@ internal sealed class MainWindow : Window, IDisposable
         Tooltip(TextId.RememberHint);
         ImGui.EndDisabled();
 
-        var rows = plugin.Selection.Rows(plugin.Inventory, character.RememberedItems)
-            .Where(r => r.Quantity > 0 || plugin.Selection.NewItems.Contains(r.Key))
-            .OrderBy(r => plugin.Game.GetItem(r.Key.ItemId).Name).ThenBy(r => r.Key.Quality).ToArray();
+        var allRows = plugin.Selection.Rows(plugin.Inventory, character.RememberedItems, character.WhitelistedItems)
+            .Where(r => !character.WhitelistedItems.Contains(r.Key.ItemId)
+                && (r.Quantity > 0 || plugin.Selection.NewItems.Contains(r.Key))).ToArray();
+        var visible = FilterItems("DiscardFilter", allRows.Select(r => r.Key.ItemId), discardFilter);
+        var rows = SortRows(allRows.Where(r => visible.Contains(r.Key.ItemId)));
         var selected = rows.Where(r => r.Selected && r.CanDiscard).ToArray();
         ImGui.TextUnformatted(plugin.T(TextId.SelectedTotal,
             selected.Length, selected.Sum(r => r.Quantity), selected.Sum(r => r.Stacks)));
-        var height = Math.Max(120, ImGui.GetContentRegionAvail().Y - 145);
-        if (ImGui.BeginTable("###DiscardTable", 6,
-            ImGuiTableFlags.RowBg | ImGuiTableFlags.BordersInnerH | ImGuiTableFlags.ScrollY
-            | ImGuiTableFlags.Resizable, new Vector2(0, height)))
+        ImGui.TextWrapped(plugin.T(TextId.FilteredDiscardHint));
+        var height = Math.Max(90, ImGui.GetContentRegionAvail().Y - 145);
+        if (ImGui.BeginTable("###DiscardTable", 7, TableFlags, new Vector2(0, height)))
         {
-            Column(TextId.Use, ImGuiTableColumnFlags.WidthFixed, 45);
+            Column(TextId.Use, ImGuiTableColumnFlags.WidthFixed, 40);
             Column(TextId.Item, ImGuiTableColumnFlags.WidthStretch);
-            Column(TextId.Quality, ImGuiTableColumnFlags.WidthFixed, 65);
-            Column(TextId.Quantity, ImGuiTableColumnFlags.WidthFixed, 60);
+            Column(TextId.Quality, ImGuiTableColumnFlags.WidthFixed, 60);
+            Column(TextId.Quantity, ImGuiTableColumnFlags.WidthFixed, 55);
             Column(TextId.Stacks, ImGuiTableColumnFlags.WidthFixed, 45);
-            Column(TextId.Source, ImGuiTableColumnFlags.WidthFixed, 90);
-            ImGui.TableSetupScrollFreeze(0, 1);
-            ImGui.TableHeadersRow();
+            Column(TextId.Source, ImGuiTableColumnFlags.WidthFixed, 80);
+            ImGui.TableSetupColumn("##Action", ImGuiTableColumnFlags.WidthFixed, 80);
+            Headers();
             foreach (var row in rows)
             {
                 ImGui.PushID($"{row.Key.ItemId}:{row.Key.Quality}");
@@ -126,23 +149,20 @@ internal sealed class MainWindow : Window, IDisposable
                 }
                 ImGui.EndDisabled();
                 ImGui.TableNextColumn();
-                DrawItem(row.Key);
+                DrawItem(row.Key.ItemId);
                 if (!row.CanDiscard && row.Quantity > 0)
                     Tooltip(TextId.CannotDiscard);
-                ImGui.TableNextColumn();
-                ImGui.TextUnformatted(Quality(row.Key));
-                ImGui.TableNextColumn();
-                ImGui.TextUnformatted(row.Quantity.ToString());
-                ImGui.TableNextColumn();
-                ImGui.TextUnformatted(row.Stacks.ToString());
+                DrawAmounts(row);
                 ImGui.TableNextColumn();
                 ImGui.TextUnformatted(plugin.T(row.Saved ? TextId.Saved : TextId.New));
+                ImGui.TableNextColumn();
+                ProtectButton(row.Key.ItemId);
                 ImGui.PopID();
             }
             ImGui.EndTable();
         }
         if (rows.Length == 0)
-            ImGui.TextDisabled(plugin.T(TextId.EmptyList));
+            ImGui.TextDisabled(plugin.T(allRows.Length == 0 ? TextId.EmptyList : TextId.NoMatches));
         if (plugin.Inventory == null)
             ImGui.TextWrapped(plugin.T(TextId.InventoryUnavailable));
 
@@ -156,7 +176,7 @@ internal sealed class MainWindow : Window, IDisposable
         ImGui.SameLine();
         ImGui.BeginDisabled(!plugin.Safe || selected.Length == 0);
         if (ImGui.Button(plugin.T(TextId.DiscardAll)))
-            plugin.Start();
+            plugin.Start(rows.Select(r => r.Key).ToHashSet());
         ImGui.EndDisabled();
         ImGui.EndDisabled();
         if (plugin.Running)
@@ -187,36 +207,39 @@ internal sealed class MainWindow : Window, IDisposable
             return;
         }
         ImGui.TextUnformatted(plugin.T(TextId.RememberedCount, character.RememberedItems.Count));
-        if (character.RememberedItems.Count == 0)
+        var allRows = plugin.Selection.Rows(plugin.Inventory, character.RememberedItems, character.WhitelistedItems)
+            .Where(r => r.Saved).ToArray();
+        var visible = FilterItems("RememberedFilter", allRows.Select(r => r.Key.ItemId), rememberedFilter);
+        var rows = SortRows(allRows.Where(r => visible.Contains(r.Key.ItemId)));
+        if (rows.Length == 0)
         {
-            ImGui.TextWrapped(plugin.T(TextId.EmptyRules));
+            ImGui.TextWrapped(plugin.T(allRows.Length == 0 ? TextId.EmptyRules : TextId.NoMatches));
             return;
         }
-        if (!ImGui.BeginTable("###RememberedTable", 5,
-            ImGuiTableFlags.RowBg | ImGuiTableFlags.BordersInnerH | ImGuiTableFlags.ScrollY
-            | ImGuiTableFlags.Resizable, new Vector2(0, ImGui.GetContentRegionAvail().Y)))
+        if (!ImGui.BeginTable("###RememberedTable", 6, TableFlags, new Vector2(0, ImGui.GetContentRegionAvail().Y)))
             return;
         Column(TextId.Item, ImGuiTableColumnFlags.WidthStretch);
-        Column(TextId.Quality, ImGuiTableColumnFlags.WidthFixed, 65);
-        Column(TextId.Quantity, ImGuiTableColumnFlags.WidthFixed, 60);
+        Column(TextId.Quality, ImGuiTableColumnFlags.WidthFixed, 60);
+        Column(TextId.Quantity, ImGuiTableColumnFlags.WidthFixed, 55);
         Column(TextId.Stacks, ImGuiTableColumnFlags.WidthFixed, 45);
-        ImGui.TableSetupColumn("##Action", ImGuiTableColumnFlags.WidthFixed, 100);
-        ImGui.TableSetupScrollFreeze(0, 1);
-        ImGui.TableHeadersRow();
-        foreach (var row in plugin.Selection.Rows(plugin.Inventory, character.RememberedItems)
-            .Where(r => r.Saved).OrderBy(r => plugin.Game.GetItem(r.Key.ItemId).Name).ThenBy(r => r.Key.Quality))
+        Column(TextId.Status, ImGuiTableColumnFlags.WidthFixed, 65);
+        ImGui.TableSetupColumn("##Action", ImGuiTableColumnFlags.WidthFixed, 190);
+        Headers();
+        foreach (var row in rows)
         {
             ImGui.PushID($"{row.Key.ItemId}:{row.Key.Quality}");
             ImGui.TableNextRow();
             ImGui.TableNextColumn();
-            DrawItem(row.Key);
+            DrawItem(row.Key.ItemId);
+            DrawAmounts(row);
             ImGui.TableNextColumn();
-            ImGui.TextUnformatted(Quality(row.Key));
+            var isProtected = character.WhitelistedItems.Contains(row.Key.ItemId);
+            ImGui.TextUnformatted(plugin.T(isProtected ? TextId.Protected : TextId.Saved));
+            if (isProtected)
+                Tooltip(TextId.ProtectedHint);
             ImGui.TableNextColumn();
-            ImGui.TextUnformatted(row.Quantity.ToString());
-            ImGui.TableNextColumn();
-            ImGui.TextUnformatted(row.Stacks.ToString());
-            ImGui.TableNextColumn();
+            ProtectButton(row.Key.ItemId);
+            ImGui.SameLine();
             ImGui.BeginDisabled(plugin.Running || plugin.ConfigurationInvalid);
             if (ImGui.Button(plugin.T(TextId.Remove)))
                 plugin.Forget(row.Key);
@@ -226,13 +249,131 @@ internal sealed class MainWindow : Window, IDisposable
         ImGui.EndTable();
     }
 
+    private void DrawWhitelist()
+    {
+        ImGui.TextWrapped(plugin.T(TextId.WhitelistInstructions, plugin.Config.SelectionKey.ToString()));
+        ImGui.TextWrapped(plugin.T(TextId.WhitelistHint));
+        var character = plugin.Character;
+        if (character == null)
+        {
+            ImGui.TextWrapped(plugin.T(TextId.Login));
+            return;
+        }
+        ImGui.TextUnformatted(plugin.T(TextId.WhitelistCount, character.WhitelistedItems.Count));
+        var visible = FilterItems("WhitelistFilter", character.WhitelistedItems, whitelistFilter);
+        var ids = visible.OrderBy(id => plugin.Game.GetItem(id).Name).ThenBy(id => id).ToArray();
+        if (ids.Length == 0)
+        {
+            ImGui.TextWrapped(plugin.T(character.WhitelistedItems.Count == 0 ? TextId.EmptyWhitelist : TextId.NoMatches));
+            return;
+        }
+        if (!ImGui.BeginTable("###WhitelistTable", 4, TableFlags, new Vector2(0, ImGui.GetContentRegionAvail().Y)))
+            return;
+        Column(TextId.Item, ImGuiTableColumnFlags.WidthStretch);
+        Column(TextId.Quantity, ImGuiTableColumnFlags.WidthFixed, 70);
+        Column(TextId.Stacks, ImGuiTableColumnFlags.WidthFixed, 55);
+        ImGui.TableSetupColumn("##Action", ImGuiTableColumnFlags.WidthFixed, 110);
+        Headers();
+        foreach (var id in ids)
+        {
+            ImGui.PushID(id.ToString());
+            var slots = plugin.Inventory?.Slots.Where(s => s.Key?.ItemId == id).ToArray() ?? [];
+            ImGui.TableNextRow();
+            ImGui.TableNextColumn();
+            DrawItem(id);
+            ImGui.TableNextColumn();
+            ImGui.TextUnformatted(slots.Sum(s => s.Quantity).ToString());
+            ImGui.TableNextColumn();
+            ImGui.TextUnformatted(slots.Length.ToString());
+            ImGui.TableNextColumn();
+            ImGui.BeginDisabled(plugin.Running || plugin.ConfigurationInvalid);
+            if (ImGui.Button(plugin.T(TextId.Unprotect)))
+                plugin.Unprotect(id);
+            Tooltip(TextId.UnprotectHint);
+            ImGui.EndDisabled();
+            ImGui.PopID();
+        }
+        ImGui.EndTable();
+    }
+
+    private HashSet<uint> FilterItems(string id, IEnumerable<uint> itemIds, ListFilter filter)
+    {
+        var ids = itemIds.Distinct().ToArray();
+        var categories = ids.Select(itemId => plugin.Game.GetItem(itemId).CategoryId).Distinct()
+            .OrderBy(category => plugin.Game.GetCategory(category, plugin.Config.Language)).ToArray();
+        var reset = filter.Category.HasValue && !categories.Contains(filter.Category.Value);
+        if (reset)
+            filter.Category = null;
+        ImGui.PushID(id);
+        ImGui.SetNextItemWidth(-1);
+        ImGui.InputTextWithHint("##Search", plugin.T(TextId.SearchHint), ref filter.Search, 256);
+        if (ImGui.BeginTabBar("##Categories", ImGuiTabBarFlags.FittingPolicyScroll))
+        {
+            if (ImGui.BeginTabItem(plugin.T(TextId.AllCategories) + "###All",
+                reset ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None))
+            {
+                filter.Category = null;
+                ImGui.EndTabItem();
+            }
+            foreach (var category in categories)
+            {
+                if (ImGui.BeginTabItem(plugin.Game.GetCategory(category, plugin.Config.Language) + $"###Category{category}"))
+                {
+                    filter.Category = category;
+                    ImGui.EndTabItem();
+                }
+            }
+            ImGui.EndTabBar();
+        }
+        ImGui.PopID();
+        var search = filter.Search.Trim();
+        return ids.Where(itemId =>
+        {
+            var item = plugin.Game.GetItem(itemId);
+            return (!filter.Category.HasValue || item.CategoryId == filter.Category)
+                && (search.Length == 0 || item.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
+                    || itemId.ToString().Contains(search, StringComparison.Ordinal));
+        }).ToHashSet();
+    }
+
+    private ItemRow[] SortRows(IEnumerable<ItemRow> rows) => rows
+        .OrderBy(r => plugin.Game.GetItem(r.Key.ItemId).Name)
+        .ThenBy(r => r.Key.ItemId).ThenBy(r => r.Key.Quality).ToArray();
+
+    private void ProtectButton(uint itemId)
+    {
+        ImGui.BeginDisabled(plugin.Running || plugin.ConfigurationInvalid
+            || plugin.Character?.WhitelistedItems.Contains(itemId) == true);
+        if (ImGui.Button(plugin.T(TextId.Protect)))
+            plugin.Protect(itemId);
+        Tooltip(TextId.ProtectHint);
+        ImGui.EndDisabled();
+    }
+
+    private void DrawAmounts(ItemRow row)
+    {
+        ImGui.TableNextColumn();
+        ImGui.TextUnformatted(Quality(row.Key));
+        ImGui.TableNextColumn();
+        ImGui.TextUnformatted(row.Quantity.ToString());
+        ImGui.TableNextColumn();
+        ImGui.TextUnformatted(row.Stacks.ToString());
+    }
+
+    private static ImGuiTableFlags TableFlags => ImGuiTableFlags.RowBg | ImGuiTableFlags.BordersInnerH
+        | ImGuiTableFlags.ScrollY | ImGuiTableFlags.Resizable;
+
+    private static void Headers()
+    {
+        ImGui.TableSetupScrollFreeze(0, 1);
+        ImGui.TableHeadersRow();
+    }
+
     private void DrawSettings()
     {
         var language = (int)plugin.Config.Language;
         if (ImGui.Combo(plugin.T(TextId.Language) + "###Language", ref language, "English\0日本語\0"))
-        {
             plugin.ChangeLanguage((UiLanguage)language);
-        }
         ImGui.BeginDisabled(plugin.Running || plugin.ConfigurationInvalid);
         var key = (int)plugin.Config.SelectionKey;
         if (ImGui.Combo(plugin.T(TextId.SelectionKey) + "###SelectionKey", ref key, "Shift\0Ctrl\0Alt\0"))
@@ -244,9 +385,9 @@ internal sealed class MainWindow : Window, IDisposable
         ImGui.TextWrapped(plugin.T(TextId.SelectionKeyHint));
     }
 
-    private void DrawItem(ItemKey key)
+    private void DrawItem(uint itemId)
     {
-        var info = plugin.Game.GetItem(key.ItemId);
+        var info = plugin.Game.GetItem(itemId);
         if (info.Icon != 0)
         {
             var texture = Services.Textures.GetFromGameIcon(new GameIconLookup(info.Icon)).GetWrapOrDefault();
@@ -256,7 +397,7 @@ internal sealed class MainWindow : Window, IDisposable
                 ImGui.SameLine();
             }
         }
-        ImGui.TextUnformatted(string.IsNullOrEmpty(info.Name) ? plugin.T(TextId.MissingItem, key.ItemId) : info.Name);
+        ImGui.TextUnformatted(string.IsNullOrEmpty(info.Name) ? plugin.T(TextId.MissingItem, itemId) : info.Name);
     }
 
     private string Quality(ItemKey key) => plugin.T(key.Quality switch

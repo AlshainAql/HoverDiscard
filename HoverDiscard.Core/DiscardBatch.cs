@@ -29,7 +29,7 @@ public sealed class DiscardBatch
 
     public DiscardBatch(InventorySnapshot snapshot, IReadOnlySet<ItemKey> included,
         IReadOnlySet<ItemKey> newItems, bool remember,
-        Action<ItemKey> rememberItem, Action<ItemKey> completeItem)
+        Action<ItemKey> rememberItem, Action<ItemKey> completeItem, IReadOnlySet<uint>? whitelisted = null)
     {
         if (snapshot.ContentId == 0 || snapshot.Slots.Select(s => s.Address).Distinct().Count() != snapshot.Slots.Count)
             throw new ArgumentException("Invalid inventory snapshot.", nameof(snapshot));
@@ -37,7 +37,8 @@ public sealed class DiscardBatch
         territoryId = snapshot.TerritoryId;
         expected = snapshot.Slots.ToArray();
         remaining = new Queue<SlotState>(expected.Where(s =>
-            s.Key is { } key && included.Contains(key) && s.CanDiscard && s.Quantity > 0));
+            s.Key is { } key && included.Contains(key) && whitelisted?.Contains(key.ItemId) != true
+            && s.CanDiscard && s.Quantity > 0));
         this.newItems = newItems.ToHashSet();
         this.remember = remember;
         this.rememberItem = rememberItem;
