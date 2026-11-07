@@ -2,6 +2,8 @@
 
 A Dalamud plugin for selecting inventory items by hovering over them and discarding the selection with a single button.
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/B1S42A7KY6)
+
 ## Installation
 
 1. Launch the game through XIVLauncher with Dalamud enabled.
