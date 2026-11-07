@@ -13,6 +13,9 @@ public sealed class Plugin : IDalamudPlugin
     private readonly WindowSystem windows = new("HoverDiscard");
     private readonly Stopwatch clock = Stopwatch.StartNew();
     private readonly MainWindow window;
+    private readonly InventoryButton inventoryButton;
+    private RememberedDiscardRequest? pendingDiscard;
+    private bool reportBatchToChat;
     private readonly string configPath;
     private readonly CommandInfo command;
     private ulong contentId;
@@ -32,6 +35,7 @@ public sealed class Plugin : IDalamudPlugin
     internal bool Safe { get; private set; }
     internal bool Stopping { get; private set; }
     internal bool Running => Batch?.IsRunning == true;
+    internal bool Starting => pendingDiscard != null;
     internal TimeSpan Now => clock.Elapsed;
     internal TimeSpan LastSelectionDraw { get; set; } = TimeSpan.MinValue;
     internal bool AllowHover { get; set; }
@@ -55,6 +59,7 @@ public sealed class Plugin : IDalamudPlugin
             Services.Log.Error(exception, "Could not read configuration; discarding and persistence are disabled.");
         }
         window = new MainWindow(this);
+        inventoryButton = new InventoryButton(this);
         windows.AddWindow(window);
         command = new CommandInfo(OnCommand) { HelpMessage = T(TextId.CommandHelp) };
         Services.Commands.AddHandler("/hoverdiscard", command);
@@ -68,8 +73,128 @@ public sealed class Plugin : IDalamudPlugin
 
     internal string T(TextId id, params object[] args) => Localization.Get(Config.Language, id, args);
     internal void OpenWindow() => window.IsOpen = true;
-    private void OnCommand(string command, string arguments) => OpenWindow();
-    private void Draw() => windows.Draw();
+    private void OnCommand(string command, string arguments)
+    {
+        _ = Services.Framework.RunOnFrameworkThread(() =>
+        {
+            if (disposed)
+                return;
+            switch (CommandInput.Parse(arguments))
+            {
+                case PluginCommand.Open:
+                    OpenWindow();
+                    break;
+                case PluginCommand.Discard:
+                    QueueRememberedDiscard();
+                    break;
+                case PluginCommand.Stop:
+                    StopWithFeedback();
+                    break;
+                default:
+                    Reply(TextId.CommandHelp);
+                    break;
+            }
+        });
+    }
+
+    private void Draw()
+    {
+        inventoryButton.Draw(window.Font);
+        windows.Draw();
+    }
+
+    private void Reply(TextId text, params object[] args) =>
+        Services.Chat.Print(T(text, args), "HoverDiscard");
+
+    internal void RequestRememberedDiscard() =>
+        _ = Services.Framework.RunOnFrameworkThread(QueueRememberedDiscard);
+
+    private void QueueRememberedDiscard()
+    {
+        if (disposed)
+            return;
+        if (Running || Starting)
+        {
+            Reply(TextId.AlreadyRunning);
+            return;
+        }
+        if (ConfigurationInvalid || SaveFailed)
+        {
+            Reply(ConfigurationInvalid ? TextId.ConfigInvalid : TextId.SaveFailed);
+            return;
+        }
+        if (!Services.ClientState.IsLoggedIn || Services.PlayerState.ContentId == 0)
+        {
+            Reply(TextId.Login);
+            return;
+        }
+        pendingDiscard = new RememberedDiscardRequest(Services.PlayerState.ContentId,
+            Services.ClientState.TerritoryType);
+    }
+
+    internal void StopWithFeedback()
+    {
+        if (disposed)
+            return;
+        var wasStarting = Starting;
+        if (!Running && !wasStarting)
+        {
+            Reply(TextId.NotRunning);
+            return;
+        }
+        reportBatchToChat = Running;
+        Stop();
+        Reply(wasStarting ? TextId.CommandCancelled : TextId.PendingStop);
+    }
+
+    private void ProcessRememberedDiscard()
+    {
+        var request = pendingDiscard;
+        pendingDiscard = null;
+        if (request == null)
+            return;
+        TextId? error;
+        if (ConfigurationInvalid || SaveFailed)
+            error = ConfigurationInvalid ? TextId.ConfigInvalid : TextId.SaveFailed;
+        else if (Character == null || contentId != request.ContentId
+            || Services.ClientState.TerritoryType != request.TerritoryId)
+            error = TextId.ContextChanged;
+        else
+        {
+            Batch = request.Prepare(Inventory, Character, Selection.Excluded, Safe,
+                key => Selection.NewItems.Remove(key), out error);
+            if (Batch != null)
+            {
+                Stopping = false;
+                Notice = null;
+                reportBatchToChat = true;
+                Reply(TextId.CommandStarted, Batch.TotalStacks);
+                return;
+            }
+        }
+        Notice = error;
+        if (error is { } failure)
+            Reply(failure);
+    }
+
+    private void TickBatch(InventorySnapshot? inventory, bool safe)
+    {
+        if (!Running)
+            return;
+        Batch!.Tick(Now, inventory, safe, GameInventory.Discard);
+        if (Running)
+            return;
+        Stopping = false;
+        Notice = ResultText(Batch.Result);
+        Services.Log.Information("Discard batch ended: {Result}; {Completed}/{Total} stacks.",
+            Batch.Result, Batch.CompletedStacks, Batch.TotalStacks);
+        if (reportBatchToChat)
+        {
+            reportBatchToChat = false;
+            Reply(Notice.Value);
+            Reply(TextId.Progress, Batch.CompletedStacks, Batch.TotalStacks);
+        }
+    }
 
     internal void Save()
     {
@@ -96,8 +221,9 @@ public sealed class Plugin : IDalamudPlugin
 
     internal void Start(IReadOnlySet<ItemKey> visible)
     {
-        if (Running || Inventory == null || Character == null || !Safe || ConfigurationInvalid || SaveFailed)
+        if (Running || Starting || Inventory == null || Character == null || !Safe || ConfigurationInvalid || SaveFailed)
             return;
+        reportBatchToChat = false;
         var settings = Character;
         var included = Selection.Included(settings.RememberedItems, settings.WhitelistedItems, visible);
         var newlySelected = Selection.NewItems.Except(settings.RememberedItems).ToHashSet();
@@ -118,6 +244,7 @@ public sealed class Plugin : IDalamudPlugin
 
     internal void Stop()
     {
+        pendingDiscard = null;
         Batch?.Stop();
         Stopping = Running;
     }
@@ -158,14 +285,14 @@ public sealed class Plugin : IDalamudPlugin
             var currentId = Services.ClientState.IsLoggedIn ? Services.PlayerState.ContentId : 0;
             if (contentId != currentId)
             {
-                Batch?.Tick(Now, null, false, GameInventory.Discard);
+                TickBatch(null, false);
                 contentId = currentId;
                 Selection.Reset();
                 Stopping = false;
                 Notice = null;
                 Character = currentId == 0 ? null : Config.ForCharacter(currentId);
             }
-            if (!window.IsOpen && !Running)
+            if (!window.IsOpen && !Running && !Starting && !inventoryButton.Visible)
             {
                 Inventory = null;
                 Safe = false;
@@ -176,17 +303,9 @@ public sealed class Plugin : IDalamudPlugin
             RuntimeError = false;
             loggedReadError = false;
 
-            if (Running)
-            {
-                Batch!.Tick(Now, Inventory, Safe, GameInventory.Discard);
-                if (!Running)
-                {
-                    Stopping = false;
-                    Notice = ResultText(Batch.Result);
-                    Services.Log.Information("Discard batch ended: {Result}; {Completed}/{Total} stacks.",
-                        Batch.Result, Batch.CompletedStacks, Batch.TotalStacks);
-                }
-            }
+            if (Starting && !Running)
+                ProcessRememberedDiscard();
+            TickBatch(Inventory, Safe);
 
             if (!Running && !ConfigurationInvalid && Inventory != null && Character != null && Safe
                 && window.IsOpen && AllowHover && Now - LastSelectionDraw < TimeSpan.FromMilliseconds(250)
@@ -204,7 +323,12 @@ public sealed class Plugin : IDalamudPlugin
             Inventory = null;
             Safe = false;
             RuntimeError = true;
-            Batch?.Tick(Now, null, false, GameInventory.Discard);
+            if (Starting)
+            {
+                pendingDiscard = null;
+                Reply(TextId.RuntimeError);
+            }
+            TickBatch(null, false);
             if (!loggedReadError)
                 Services.Log.Error(exception, "Could not safely read or update the inventory.");
             loggedReadError = true;
@@ -225,6 +349,7 @@ public sealed class Plugin : IDalamudPlugin
     public void Dispose()
     {
         disposed = true;
+        pendingDiscard = null;
         Services.Framework.Update -= Update;
         Services.PluginInterface.UiBuilder.Draw -= Draw;
         Services.PluginInterface.UiBuilder.OpenMainUi -= OpenWindow;

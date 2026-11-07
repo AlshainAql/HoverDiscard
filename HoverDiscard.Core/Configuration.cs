@@ -18,6 +18,7 @@ public sealed class Configuration
     public int Version { get; set; } = 2;
     public UiLanguage Language { get; set; }
     public SelectionKey SelectionKey { get; set; } = SelectionKey.Shift;
+    public bool ShowInventoryButton { get; set; } = true;
     public Dictionary<ulong, CharacterSettings> Characters { get; set; } = [];
 
     public CharacterSettings ForCharacter(ulong contentId)

@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Runtime.InteropServices;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.ClientState.Keys;
@@ -14,6 +15,7 @@ namespace HoverDiscard;
 internal sealed unsafe class GameInventory
 {
     private const int SlotsPerPage = 35;
+    private static readonly string[] InventoryWindows = ["InventoryExpansion", "InventoryLarge", "Inventory"];
     private readonly Dictionary<uint, ItemInfo> items = [];
     private readonly Dictionary<(uint Id, UiLanguage Language), string> categories = [];
     private static readonly uint ProcessId = (uint)Environment.ProcessId;
@@ -47,6 +49,22 @@ internal sealed unsafe class GameInventory
     {
         var addon = Services.GameGui.GetAddonByName(name);
         return addon != 0 && ((AtkUnitBase*)addon.Address)->IsVisible;
+    }
+
+    public static Vector2? InventoryAnchor()
+    {
+        if (!Services.ClientState.IsLoggedIn)
+            return null;
+        foreach (var name in InventoryWindows)
+        {
+            var address = Services.GameGui.GetAddonByName(name);
+            if (address == 0)
+                continue;
+            var addon = (AtkUnitBase*)address.Address;
+            if (addon->IsVisible && addon->IsReady && addon->RootNode != null)
+                return new Vector2(addon->X, addon->Y + 8 * addon->GetScale());
+        }
+        return null;
     }
 
     public ItemInfo GetItem(uint id)

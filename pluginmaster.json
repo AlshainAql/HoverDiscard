@@ -3,7 +3,7 @@
     "Author": "AlshainAql",
     "Name": "HoverDiscard",
     "InternalName": "HoverDiscard",
-    "AssemblyVersion": "0.2.0.0",
+    "AssemblyVersion": "0.3.0.0",
     "Description": "Collect inventory item types with a modifier key and discard a reviewed selection. Browse categories, remember rules per character, and protect items with a whitelist. English/Japanese UI. Report problems through GitHub Issues.",
     "ApplicableVersion": "any",
     "RepoUrl": "https://github.com/AlshainAql/HoverDiscard",
@@ -18,9 +18,9 @@
     "LoadPriority": 0,
     "Punchline": "Select inventory items by hovering, then discard them together.",
     "AcceptsFeedback": true,
-    "DownloadLinkInstall": "https://github.com/AlshainAql/HoverDiscard/releases/download/v0.2.0.0/HoverDiscard-0.2.0.0.zip",
-    "DownloadLinkUpdate": "https://github.com/AlshainAql/HoverDiscard/releases/download/v0.2.0.0/HoverDiscard-0.2.0.0.zip",
-    "LastUpdate": 1794029308,
-    "Changelog": "Add category tabs and search to all lists. Add a per-character whitelist protecting all item qualities. Bulk discard now applies only to checked items visible in the current filters."
+    "DownloadLinkInstall": "https://github.com/AlshainAql/HoverDiscard/releases/download/v0.3.0.0/HoverDiscard-0.3.0.0.zip",
+    "DownloadLinkUpdate": "https://github.com/AlshainAql/HoverDiscard/releases/download/v0.3.0.0/HoverDiscard-0.3.0.0.zip",
+    "LastUpdate": 1794032572,
+    "Changelog": "Add discard, stop, and help commands plus an optional inventory-side action button. Commands and the inventory menu discard only eligible remembered items, respecting whitelist protection and unchecked items."
   }
 ]

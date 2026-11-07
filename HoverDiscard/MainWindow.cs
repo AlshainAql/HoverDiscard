@@ -12,6 +12,7 @@ internal sealed class MainWindow : Window, IDisposable
 {
     private readonly Plugin plugin;
     private readonly IFontHandle font;
+    internal IFontHandle Font => font;
     private readonly ListFilter discardFilter = new();
     private readonly ListFilter rememberedFilter = new();
     private readonly ListFilter whitelistFilter = new();
@@ -383,6 +384,18 @@ internal sealed class MainWindow : Window, IDisposable
         }
         ImGui.EndDisabled();
         ImGui.TextWrapped(plugin.T(TextId.SelectionKeyHint));
+        ImGui.Separator();
+        ImGui.BeginDisabled(plugin.ConfigurationInvalid);
+        var showButton = plugin.Config.ShowInventoryButton;
+        if (ImGui.Checkbox(plugin.T(TextId.ShowInventoryButton), ref showButton))
+        {
+            plugin.Config.ShowInventoryButton = showButton;
+            plugin.Save();
+        }
+        ImGui.EndDisabled();
+        ImGui.TextWrapped(plugin.T(TextId.InventoryButtonHint));
+        ImGui.Separator();
+        ImGui.TextWrapped(plugin.T(TextId.CommandHelp));
     }
 
     private void DrawItem(uint itemId)

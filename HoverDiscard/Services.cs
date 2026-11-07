@@ -16,5 +16,6 @@ internal sealed class Services
     [PluginService] public static ICondition Condition { get; private set; } = null!;
     [PluginService] public static IDataManager Data { get; private set; } = null!;
     [PluginService] public static ITextureProvider Textures { get; private set; } = null!;
+    [PluginService] public static IChatGui Chat { get; private set; } = null!;
     [PluginService] public static IPluginLog Log { get; private set; } = null!;
 }

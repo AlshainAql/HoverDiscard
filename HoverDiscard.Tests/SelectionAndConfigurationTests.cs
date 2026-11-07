@@ -68,6 +68,8 @@ public sealed class SelectionAndConfigurationTests
         {
             var config = ConfigurationFile.Load(path, UiLanguage.Japanese);
             Assert.Equal(UiLanguage.Japanese, config.Language);
+            Assert.True(config.ShowInventoryButton);
+            config.ShowInventoryButton = false;
             var first = config.ForCharacter(42);
             first.RememberedItems.UnionWith([new(100, ItemQuality.Normal), new(100, ItemQuality.High)]);
             config.ForCharacter(43).RememberNewItems = false;
@@ -76,6 +78,7 @@ public sealed class SelectionAndConfigurationTests
             ConfigurationFile.Save(path, config);
             var restored = ConfigurationFile.Load(path, UiLanguage.Japanese);
             Assert.Equal(UiLanguage.English, restored.Language);
+            Assert.False(restored.ShowInventoryButton);
             Assert.Equal(SelectionKey.Alt, restored.SelectionKey);
             Assert.Equal(2, restored.ForCharacter(42).RememberedItems.Count);
             Assert.True(restored.ForCharacter(42).RememberNewItems);

@@ -29,9 +29,30 @@ Updates are available through the same plugin installer. Release downloads are a
 
 The selection covers all stacks of the same item and quality in your main inventory. For example, stacks of 99 and 20 are treated as a total of 119. **NQ, HQ, and collectables are tracked separately.**
 
-Items are only discarded when you press the button. **Discarding is irreversible.**
+Items are only discarded when you explicitly start an operation with a button or command. **Discarding is irreversible.**
 
 The operation takes a fixed snapshot of your main inventory and waits for each discard to be confirmed. If the inventory changes unexpectedly, the character changes area, the game loses focus, or a request times out, it stops without retrying. **Stop** and closing the window prevent further requests; a request already sent to the game may still complete.
+
+## Commands
+
+| Command | Action |
+| --- | --- |
+| `/hoverdiscard` | Open the plugin window. |
+| `/hoverdiscard discard` | Discard currently held items matching this character's remembered rules. |
+| `/hoverdiscard stop` | Cancel a pending start or stop further discard requests. |
+| `/hoverdiscard help` | Show command help. |
+
+The discard command works while the plugin window is closed. It scans the four main inventory pages using the remembered item and quality rules, excludes whitelisted and unchecked items, and does not include newly selected items that have not been remembered. Category tabs and search filters do not limit this command.
+
+Start, completion, and stop reasons appear in your local chat log using the selected interface language. An unsafe game state, unavailable inventory, or character/area change rejects the request instead of waiting to run later. Repeating the command while an operation is pending or running does not queue another operation.
+
+## Inventory button
+
+A small trash icon appears to the left of the main inventory window in normal, expanded, and full layouts. It follows the window when moved and stays within the screen edges.
+
+Click the icon to see the eligible remembered-item totals and choose **Discard remembered items**, **Stop**, or **Open HoverDiscard**. The discard action uses the same scope and protections as `/hoverdiscard discard`.
+
+You can turn the icon on or off with **Show the button beside the inventory window** in **Settings**.
 
 ## Remembered items
 
