@@ -1,17 +1,16 @@
-# Contribution and support policy
+# Reporting issues
 
-HoverDiscard is developed for the author's personal use.
+If you encounter a bug or other problem with HoverDiscard, please [open a GitHub issue](https://github.com/AlshainAql/HoverDiscard/issues/new/choose).
 
-## External requests
+Check existing issues first to avoid duplicate reports. Include the following details when available:
 
-The following external submissions are not accepted:
+- What happened and what you expected.
+- Steps to reproduce the problem.
+- HoverDiscard, Dalamud, and game versions.
+- Relevant log excerpts or screenshots.
 
-- Feature requests and proposed behavior changes
-- Bug reports
-- Questions and usage inquiries
-- Installation, update, or troubleshooting requests
-- Pull requests and requests to join development
+Remove personal information from logs and screenshots before posting them.
 
-Issue and pull request creation is restricted to collaborators for the author's own work tracking. External collaborators are not invited.
+## Pull requests
 
-Public availability does not include a commitment to support, replies, fixes, or continued updates. Other repositories and contact channels are not alternative support channels for this project.
+Pull requests are currently limited to repository collaborators.

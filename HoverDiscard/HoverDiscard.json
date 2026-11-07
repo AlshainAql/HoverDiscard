@@ -2,7 +2,7 @@
   "Author": "AlshainAql",
   "Name": "HoverDiscard",
   "Punchline": "Select inventory items by hovering, then discard them together.",
-  "Description": "A personal-use plugin for collecting inventory item types with a modifier key and discarding a reviewed selection. Supports character-specific remembered items and English/Japanese UI. No external support or contributions.",
+  "Description": "Collect inventory item types with a modifier key and discard a reviewed selection. Supports character-specific remembered items and English/Japanese UI. Report bugs and other problems through GitHub Issues.",
   "InternalName": "HoverDiscard",
   "ApplicableVersion": "any",
   "DalamudApiLevel": 15,
@@ -14,5 +14,5 @@
   "LoadRequiredState": 0,
   "LoadSync": false,
   "CanUnloadAsync": false,
-  "AcceptsFeedback": false
+  "AcceptsFeedback": true
 }

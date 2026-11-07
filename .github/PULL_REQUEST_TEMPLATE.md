@@ -1,4 +1,4 @@
-<!-- For the author's own work. External pull requests are not accepted. -->
+<!-- Pull requests are currently limited to repository collaborators. -->
 
 ## Changes
 

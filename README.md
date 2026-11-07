@@ -1,10 +1,6 @@
 # HoverDiscard
 
-A personal-use Dalamud plugin for selecting inventory items by hovering over them and discarding the selection with a single button.
-
-> **This plugin is intended for the author's personal use.**
-> Feature requests, bug reports, questions, support requests, and external pull requests are not accepted.
-> Development and updates follow the author's own needs.
+A Dalamud plugin for selecting inventory items by hovering over them and discarding the selection with a single button.
 
 ## Usage
 
@@ -32,8 +28,8 @@ With this option off, newly selected item types apply to the current operation o
 - The target is the four main inventory pages, including equipment stored there.
 - Individual entries can be excluded from the current operation, and an active operation can be stopped.
 
-## Contributions and support
+## Bug reports
 
-Issues and pull requests are restricted to collaborators and reserved for the author's own development work. External collaborators are not invited, and Discussions are disabled.
+If you encounter a bug or other problem, please [open a GitHub issue](https://github.com/AlshainAql/HoverDiscard/issues/new/choose).
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the full policy.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details to include in your report.
