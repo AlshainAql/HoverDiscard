@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    env:
+      DALAMUD_HOME: ${{ runner.temp }}/dalamud
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Download Dalamud build references
+        shell: pwsh
+        run: |
+          # Stable Dalamud 15.0.3.9, API 15.
+          $archive = Join-Path $env:RUNNER_TEMP 'dalamud.zip'
+          Invoke-WebRequest -Uri 'https://kamori.goats.dev/File/Get/3e11e262426747b939bd8e1164a0f7d18bfda2dcc35b3f3ee7ee9fc7df78d2d9' -OutFile $archive
+          Expand-Archive -LiteralPath $archive -DestinationPath $env:DALAMUD_HOME
+      - name: Run tests
+        run: dotnet test HoverDiscard.Tests/HoverDiscard.Tests.csproj --configuration Release
+      - name: Build plugin
+        run: dotnet build HoverDiscard/HoverDiscard.csproj --configuration Release -p:RestoreLockedMode=true
+      - name: Validate release package
+        shell: pwsh
+        run: |
+          $manifest = Get-Content 'HoverDiscard/bin/Release/HoverDiscard.json' -Raw | ConvertFrom-Json
+          $feed = @(Get-Content 'pluginmaster.json' -Raw | ConvertFrom-Json)
+          if ($env:RELEASE_TAG -ne "v$($manifest.AssemblyVersion)") {
+            throw 'Release tag does not match the plugin version.'
+          }
+          if ($feed.Count -ne 1 -or $feed[0].InternalName -ne $manifest.InternalName -or
+              $feed[0].AssemblyVersion -ne $manifest.AssemblyVersion -or
+              $feed[0].DalamudApiLevel -ne $manifest.DalamudApiLevel) {
+            throw 'Repository manifest does not match the plugin.'
+          }
+          if ($feed[0].PSObject.Properties.Name -match '^Testing|^DownloadLinkTesting$' -or $feed[0].IsTestingExclusive) {
+            throw 'Only normal releases are supported.'
+          }
+          $assetName = "HoverDiscard-$($manifest.AssemblyVersion).zip"
+          $assetUrl = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:RELEASE_TAG/$assetName"
+          if ($feed[0].DownloadLinkInstall -ne $assetUrl -or $feed[0].DownloadLinkUpdate -ne $assetUrl) {
+            throw 'Repository download URLs do not match the release asset.'
+          }
+          $package = 'HoverDiscard/bin/Release/HoverDiscard/latest.zip'
+          $zip = [IO.Compression.ZipFile]::OpenRead((Resolve-Path $package))
+          try {
+            $entries = @($zip.Entries.FullName)
+            foreach ($required in @('HoverDiscard.dll', 'HoverDiscard.Core.dll', 'HoverDiscard.deps.json', 'HoverDiscard.json', 'LICENSE')) {
+              if ($required -notin $entries) { throw "Missing package entry: $required" }
+            }
+            if ($entries -match 'Tests|xunit|testhost|Microsoft.TestPlatform') {
+              throw 'Test files must not be included in the release package.'
+            }
+          } finally {
+            $zip.Dispose()
+          }
+          $assetPath = Join-Path $env:RUNNER_TEMP $assetName
+          Copy-Item -LiteralPath $package -Destination $assetPath
+          "RELEASE_ASSET=$assetPath" >> $env:GITHUB_ENV
+          Get-FileHash -LiteralPath $assetPath -Algorithm SHA256
+      - name: Upload release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$env:RELEASE_TAG" "$env:RELEASE_ASSET" --repo "$env:GITHUB_REPOSITORY"
