@@ -33,3 +33,7 @@ With this option off, newly selected item types apply to the current operation o
 If you encounter a bug or other problem, please [open a GitHub issue](https://github.com/AlshainAql/HoverDiscard/issues/new/choose).
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for details to include in your report.
+
+## License
+
+Licensed under the [BSD-3-Clause license](LICENSE).

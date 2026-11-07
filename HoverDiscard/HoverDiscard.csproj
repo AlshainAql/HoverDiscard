@@ -4,6 +4,8 @@
     <AssemblyName>HoverDiscard</AssemblyName>
     <RootNamespace>HoverDiscard</RootNamespace>
     <Authors>AlshainAql</Authors>
+    <Copyright>Copyright (c) 2026 AlshainAql</Copyright>
+    <PackageLicenseExpression>BSD-3-Clause</PackageLicenseExpression>
     <Description>Collect inventory items by hovering and discard a reviewed selection.</Description>
     <PackageProjectUrl>https://github.com/AlshainAql/HoverDiscard</PackageProjectUrl>
     <IsPackable>false</IsPackable>
@@ -13,5 +15,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../HoverDiscard.Core/HoverDiscard.Core.csproj" />
+    <None Include="../LICENSE" Link="LICENSE" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
