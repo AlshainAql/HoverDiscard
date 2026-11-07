@@ -2,6 +2,22 @@
 
 A Dalamud plugin for selecting inventory items by hovering over them and discarding the selection with a single button.
 
+## Installation
+
+1. Launch the game through XIVLauncher with Dalamud enabled.
+2. Open Dalamud settings with `/xlsettings` and select **Experimental**.
+3. Under **Custom Plugin Repositories**, paste the following URL and click the **+** button:
+
+   ```text
+   https://raw.githubusercontent.com/AlshainAql/HoverDiscard/main/pluginmaster.json
+   ```
+
+4. Click **Save changes and close**.
+5. Open the plugin installer with `/xlplugins`, search for **HoverDiscard** under **All Plugins**, and click **Install**.
+6. Open HoverDiscard with `/hoverdiscard`.
+
+Updates are available through the same plugin installer. Release downloads are also available on [GitHub Releases](https://github.com/AlshainAql/HoverDiscard/releases).
+
 ## Usage
 
 1. Open the plugin window with `/hoverdiscard` or through Dalamud's plugin settings.
