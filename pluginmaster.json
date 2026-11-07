@@ -3,7 +3,7 @@
     "Author": "AlshainAql",
     "Name": "HoverDiscard",
     "InternalName": "HoverDiscard",
-    "AssemblyVersion": "0.1.0.0",
+    "AssemblyVersion": "0.1.0.1",
     "Description": "Collect inventory item types with a modifier key and discard a reviewed selection. Supports character-specific remembered items and English/Japanese UI. Report bugs and other problems through GitHub Issues.",
     "ApplicableVersion": "any",
     "RepoUrl": "https://github.com/AlshainAql/HoverDiscard",
@@ -18,8 +18,9 @@
     "LoadPriority": 0,
     "Punchline": "Select inventory items by hovering, then discard them together.",
     "AcceptsFeedback": true,
-    "DownloadLinkInstall": "https://github.com/AlshainAql/HoverDiscard/releases/download/v0.1.0.0/HoverDiscard-0.1.0.0.zip",
-    "DownloadLinkUpdate": "https://github.com/AlshainAql/HoverDiscard/releases/download/v0.1.0.0/HoverDiscard-0.1.0.0.zip",
-    "LastUpdate": 1794026431
+    "DownloadLinkInstall": "https://github.com/AlshainAql/HoverDiscard/releases/download/v0.1.0.1/HoverDiscard-0.1.0.1.zip",
+    "DownloadLinkUpdate": "https://github.com/AlshainAql/HoverDiscard/releases/download/v0.1.0.1/HoverDiscard-0.1.0.1.zip",
+    "LastUpdate": 1794028149,
+    "Changelog": "Fix hover selection in expanded inventory windows and correctly resolve sorted inventory slots."
   }
 ]

@@ -4,6 +4,7 @@ using Dalamud.Game.ClientState.Keys;
 using FFXIVClientStructs.FFXIV.Client.Enums;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
+using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using HoverDiscard.Core;
 using Lumina.Excel.Sheets;
@@ -123,8 +124,22 @@ internal sealed unsafe class GameInventory
         var addon = stage->AtkCollisionManager->IntersectingAddon;
         if (addon == null)
             return null;
+        var orderModule = ItemOrderModule.Instance();
+        var sorter = orderModule == null ? null : orderModule->InventorySorter;
+        if (sorter == null || sorter->InventoryType != InventoryType.Inventory1
+            || sorter->ItemsPerPage != SlotsPerPage || sorter->Items.Count != 4 * SlotsPerPage
+            || sorter->SortFunctionIndex != -1 || sorter->PercentComplete != 100)
+            return null;
+        var displayOrder = new SlotAddress[4 * SlotsPerPage];
+        for (var i = 0; i < displayOrder.Length; i++)
+        {
+            var entry = sorter->Items[i].Value;
+            if (entry == null)
+                return null;
+            displayOrder[i] = new SlotAddress(entry->Page, entry->Slot);
+        }
         return HoverSelection.Resolve(inventory, true, detail->TypeOrId, detail->Index,
-            hovered, detail->ItemId, addon->NameString);
+            hovered, detail->ItemId, addon->NameString, displayOrder);
     }
 
     public static void Discard(SlotAddress address)
