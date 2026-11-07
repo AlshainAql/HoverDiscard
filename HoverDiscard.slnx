@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="HoverDiscard.Core/HoverDiscard.Core.csproj" />
+  <Project Path="HoverDiscard.Tests/HoverDiscard.Tests.csproj" />
+  <Project Path="HoverDiscard/HoverDiscard.csproj" />
+</Solution>
