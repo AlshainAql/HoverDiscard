@@ -292,7 +292,7 @@ public sealed class Plugin : IDalamudPlugin
                 Notice = null;
                 Character = currentId == 0 ? null : Config.ForCharacter(currentId);
             }
-            if (!window.IsOpen && !Running && !Starting && !inventoryButton.Visible)
+            if (!window.IsOpen && !Running && !Starting)
             {
                 Inventory = null;
                 Safe = false;

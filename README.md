@@ -50,7 +50,7 @@ Start, completion, and stop reasons appear in your local chat log using the sele
 
 A small trash icon appears to the left of the main inventory window in normal, expanded, and full layouts. It follows the window when moved and stays within the screen edges.
 
-Click the icon to see the eligible remembered-item totals and choose **Discard remembered items**, **Stop**, or **Open HoverDiscard**. The discard action uses the same scope and protections as `/hoverdiscard discard`.
+**Left-click** the icon to immediately discard eligible remembered items, using the same scope and protections as `/hoverdiscard discard`. **Right-click** to open HoverDiscard. The icon does not open a menu or popup. Use `/hoverdiscard stop` or the plugin window to stop an operation.
 
 You can turn the icon on or off with **Show the button beside the inventory window** in **Settings**.
 

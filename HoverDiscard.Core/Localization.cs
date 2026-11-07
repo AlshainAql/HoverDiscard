@@ -12,7 +12,7 @@ public enum TextId
     Language, SelectionKey, SelectionKeyHint, SaveFailed, RetrySave, ConfigInvalid, RuntimeError,
     SelectedTotal, RememberedCount, RuleHint, ActiveHint, NoItems, ExcludedHint, ClearHint,
     PendingStop, CommandHelp,
-    CommandStarted, AlreadyRunning, NotRunning, CommandCancelled, NoRememberedTargets, ShowInventoryButton, InventoryButtonHint, InventoryButtonTooltip, DiscardRemembered, OpenPlugin, RememberedTargetTotal, CommandScopeHint,
+    CommandStarted, AlreadyRunning, NotRunning, CommandCancelled, NoRememberedTargets, ShowInventoryButton, InventoryButtonHint,
     Whitelist, WhitelistInstructions, WhitelistHint, WhitelistCount, EmptyWhitelist, Protect, ProtectHint, Protected, ProtectedHint, Unprotect, UnprotectHint, AllCategories, OtherCategory, SearchHint, NoMatches, Status, FilteredDiscardHint,
 }
 
@@ -43,12 +43,7 @@ public static class Localization
         [TextId.CommandCancelled] = ("Cancelled the discard request before it started.", "開始前の破棄要求を取り消しました。"),
         [TextId.NoRememberedTargets] = ("No eligible remembered items are currently held. Whitelisted and unchecked items are excluded.", "現在の所持品に破棄対象の記憶済みアイテムがありません。保護中・チェックを外したアイテムは対象外です。"),
         [TextId.ShowInventoryButton] = ("Show the button beside the inventory window", "所持品ウィンドウの横にボタンを表示"),
-        [TextId.InventoryButtonHint] = ("The button follows the left edge of the main inventory window. Open its menu to discard remembered items, stop, or open HoverDiscard.", "所持品ウィンドウの左側にボタンを表示します。メニューから記憶済みアイテムの破棄・停止・HoverDiscardの表示を選べます。"),
-        [TextId.InventoryButtonTooltip] = ("HoverDiscard: remembered-item actions", "HoverDiscard：記憶済みアイテムの操作"),
-        [TextId.DiscardRemembered] = ("Discard remembered items", "記憶済みアイテムを破棄"),
-        [TextId.OpenPlugin] = ("Open HoverDiscard", "HoverDiscardを開く"),
-        [TextId.RememberedTargetTotal] = ("Remembered targets: {0} types, {1} items in {2} stacks", "記憶済みの対象：{0} 種類・合計 {1} 個（{2} 枠）"),
-        [TextId.CommandScopeHint] = ("Uses remembered rules across all categories. Whitelisted and unchecked items are excluded; new selections are not included.", "全カテゴリーの記憶済みルールを使います。保護中・チェックを外したアイテムは除外し、今回の追加分は含めません。"),
+        [TextId.InventoryButtonHint] = ("The button follows the left edge of the main inventory window. Left-click to discard eligible remembered items; right-click to open HoverDiscard.", "所持品ウィンドウの左側にボタンを表示します。左クリックで対象の記憶済みアイテムを破棄し、右クリックでHoverDiscardを開きます。"),
         [TextId.CommandHelp] = ("/hoverdiscard: open the window. /hoverdiscard discard: discard held items matching remembered rules. /hoverdiscard stop: stop. /hoverdiscard help: show this help.", "/hoverdiscard：画面を開く。/hoverdiscard discard：所持品のうち記憶済みのアイテムを破棄。/hoverdiscard stop：停止。/hoverdiscard help：この説明を表示。"),
         [TextId.DiscardList] = ("Discard list", "破棄リスト"),
         [TextId.RememberedItems] = ("Remembered items", "記憶したアイテム"),
